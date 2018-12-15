@@ -34,6 +34,12 @@ adminRouter.route('/getProductDetails')
     })
     .get(adminController.getProductDetails);
 
+adminRouter.route('/getAllProductDetails')
+    .all(function (req, res, next) {
+        next();
+    })
+    .get(adminController.getAllProductDetails);
+
 adminRouter.route('/editProduct')
     .all(function (req, res, next) {
         next();

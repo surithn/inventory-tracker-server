@@ -170,7 +170,7 @@ exports.saveProductDetails = (req, res, next) => {
 
     branchIds = []
     for (let branch of branchDetails) {
-        branchIds.push(branch.branchId)
+        branchIds.push(branch.id)
     }
 
     try {
@@ -189,8 +189,8 @@ exports.saveProductDetails = (req, res, next) => {
 
                 for (let task of tasks) {
                     var task_values = [
-                        task.taskName,
-                        task.taskDescription,
+                        task.name,
+                        task.description,
                         new Date(),
                         product_id
                     ];
@@ -303,20 +303,26 @@ exports.editProductDetails = (req, res, next) => {
     var productDescription = req.body.productDescription;
     var tasks_length = req.body.tasks.length;
     var tasks = req.body.tasks;
-    var branchIds = req.body.branchIds;
+    var branchDetails = req.body.branchDetails;
+
     var product_id = req.body.productId;
 
-    var delete_task_query = "delete from  `maithree-db`.product_master_steps where product_master_id =" + product_id;
+    var delete_task_query = "delete from  `product_master_steps` where product_master_id =" + product_id;
     var insert_task_query = "INSERT into `product_master_steps` (task_name,task_description,created_time, product_master_id) VALUES(?)";
     var update_product_query = "update `product_master` set product_name = ? , product_description = ?, number_of_task = ? where id = ? ";
+    var delete_branch_product_mapping_query = "delete from `branch-product_master` where product_id =" + product_id;
+    var insert_branch_product_query = "INSERT into `branch-product_master` (branch_id,product_id,created_date, active) VALUES(?)";
 
+    branchIds = []
+    for (let branch of branchDetails) {
+        branchIds.push(branch.id)
+    }
 
     try {
         var values = [
             productName,
             productDescription,
             tasks_length,
-            createdBy,
             new Date()];
 
         // delete tasks into product table
@@ -350,6 +356,32 @@ exports.editProductDetails = (req, res, next) => {
                     }
                 });
 
+
+                // delete branch product mapping
+
+                db.query(delete_branch_product_mapping_query, function (err, result) {
+
+                    if (err) {
+                        logger.error(err);
+                    }
+                });
+                for (let branch_id of branchIds) {
+
+                    product_branch_values = [
+                        branch_id,
+                        product_id,
+                        new Date(),
+                        'Y'
+                    ];
+                    // insert into branch product mapping
+                    db.query(insert_branch_product_query, [product_branch_values], function (err, insRes) {
+                        if (err) {
+                            logger.error(err);
+                        }
+                    });
+
+                }
+
             }
         );
 
@@ -360,6 +392,58 @@ exports.editProductDetails = (req, res, next) => {
     }
     return res.json({status: true});
 
+};
+
+
+exports.getAllProductDetails = (req, res, next) => {
+
+    var branch_id = req.query.branchId;
+    var result_array = [];
+
+    var get_products_for_branch_query = "SELECT b.id,b.product_name from `branch-product_master` a  join `product_master` b  on a.product_id=b.id where a.branch_id=" + branch_id;
+    try {
+
+        db.query(get_products_for_branch_query, function (err, result, fields) {
+            var product_array = [];
+
+            if (err) throw err;
+
+            async.forEach(result, function (res, callback) {
+
+                product_id = res.id;
+
+                console.log("product id" + product_id);
+
+                var get_tasks_for_product_query = "select id,task_name as name, task_description as description from `maithree-db`.product_master_steps where product_master_id =" + product_id;
+
+                db.query(get_tasks_for_product_query, function (err, result, fields) {
+                    tasks_array = [];
+                    console.log(result);
+                    if (err) throw err;
+
+                    // for (let res of result) {
+
+                    product_array.push({
+                        id: res.id,
+                        name: res.product_name,
+                        tasks: result
+                    });
+
+                    callback(null);
+                });
+
+            }, function () {
+                res.json(product_array);
+
+            });
+
+        });
+
+
+    } catch (err) {
+        logger.error(err);
+        return res.json({status: false});
+    }
 };
 
 
