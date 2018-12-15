@@ -34,6 +34,12 @@ adminRouter.route('/getProductDetails')
     })
     .get(adminController.getProductDetails);
 
+adminRouter.route('/editProduct')
+    .all(function (req, res, next) {
+        next();
+    })
+    .post(adminController.editProductDetails)
+
 
 
 //getBranchProductDetailsForTarget

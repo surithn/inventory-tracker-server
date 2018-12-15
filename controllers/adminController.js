@@ -234,7 +234,7 @@ exports.saveProductDetails = (req, res, next) => {
 exports.getProducts = (req, res, next) => {
 
 
-    var get_products_query = "SELECT  a.id, a.product_name FROM `product_master` a ";
+    var get_products_query = "SELECT  a.id, a.product_name,a.product_description FROM `product_master` a ";
     var product_array = []
 
     try {
@@ -243,7 +243,8 @@ exports.getProducts = (req, res, next) => {
             for (let res of result) {
                 product_array.push({
                     id: res.id,
-                    name: res.product_name
+                    name: res.product_name,
+                    description: res.product_description
                 });
 
             }
@@ -294,6 +295,71 @@ exports.getProductDetails = (req, res, next) => {
         logger.error(err);
         return res.json({status: false});
     }
+};
 
+exports.editProductDetails = (req, res, next) => {
+
+    var productName = req.body.productName;
+    var productDescription = req.body.productDescription;
+    var tasks_length = req.body.tasks.length;
+    var tasks = req.body.tasks;
+    var branchIds = req.body.branchIds;
+    var createdBy = req.body.createdBy;
+    var product_id = req.body.productId;
+
+    var delete_task_query = "delete from  `maithree-db`.product_master_steps where product_master_id =" + product_id;
+    var insert_task_query = "INSERT into `product_master_steps` (task_name,task_description,created_by,created_time, product_master_id) VALUES(?)";
+    var update_product_query = "update `product_master` set product_name = ? , product_description = ?, number_of_task = ? where id = ? ";
+
+
+    try {
+        var values = [
+            productName,
+            productDescription,
+            tasks_length,
+            createdBy,
+            new Date()];
+
+        // delete tasks into product table
+        db.query(delete_task_query, function (err, result, fields) {
+                if (err) {
+                    logger.error(err);
+                }
+
+                // insert tasks for product
+                for (let task of tasks) {
+                    var task_values = [
+                        task.name,
+                        task.description,
+                        createdBy,
+                        new Date(),
+                        product_id
+                    ];
+                    db.query(insert_task_query, [task_values], function (err, insRes) {
+                        if (err) {
+                            logger.error(err);
+                        }
+                    });
+
+                }
+
+                // update product
+
+                db.query(update_product_query, [productName, productDescription, tasks_length, product_id], function (err, result) {
+
+                    if (err) {
+                        logger.error(err);
+                    }
+                });
+
+            }
+        );
+
+
+    } catch (err) {
+        logger.error(err);
+        return res.json({status: false});
+    }
+    return res.json({status: true});
 
 };
