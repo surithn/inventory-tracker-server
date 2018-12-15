@@ -22,6 +22,18 @@ adminRouter.route('/saveProduct')
     })
     .post(adminController.saveProductDetails)
 
+adminRouter.route('/getProducts')
+    .all(function (req, res, next) {
+        next();
+    })
+    .get(adminController.getProducts);
+
+adminRouter.route('/getProductDetails')
+    .all(function (req, res, next) {
+        next();
+    })
+    .get(adminController.getProductDetails);
+
 
 
 //getBranchProductDetailsForTarget

@@ -229,16 +229,12 @@ exports.saveProductDetails = (req, res, next) => {
     }
     return res.json({status: true});
 
-}
+};
 
 exports.getProducts = (req, res, next) => {
 
-    // console.log(req.query.branchId);
-    // var branch_id = req.query.branchId;
-
 
     var get_products_query = "SELECT  a.id, a.product_name FROM `product_master` a ";
-    console.log(get_products_query)
     var product_array = []
 
     try {
@@ -251,7 +247,6 @@ exports.getProducts = (req, res, next) => {
                 });
 
             }
-            console.log(product_array)
             return res.json(product_array);
 
         });
@@ -261,35 +256,44 @@ exports.getProducts = (req, res, next) => {
     }
 };
 
-exports.getBranchForProduct = (req, res, next) => {
+exports.getProductDetails = (req, res, next) => {
 
-    console.log(req.query.branchId);
     var product_id = req.query.productId;
 
 
-    var get_branch_for_product_query = "select a.branch_id, b.name from `product_master` a join `branch` b on a.branch_id = b.id where a.id = " + product_id;
-    console.log(get_branch_for_product_query)
-    var branch_array = []
+    var get_branch_for_product_query = "SELECT a.branch_id,b.name from `branch-product_master` a  join `branch` b  on a.branch_id=b.id where a.product_id= " + product_id;
+    var get_tasks_for_product_query = "select id,task_name, task_description from `maithree-db`.product_master_steps where product_master_id =" + product_id;
+    var branch_array = [];
+    var tasks_array = [];
 
     try {
         db.query(get_branch_for_product_query, function (err, result, fields) {
             if (err) throw err;
             for (let res of result) {
                 branch_array.push({
-                    id: res.id,
-                    name: res.product_name
+                    id: res.branch_id,
+                    name: res.name
                 });
 
             }
-            console.log(branch_array)
-            return res.json(branch_array);
+            db.query(get_tasks_for_product_query, function (err, result, fields) {
+                if (err) throw err;
+                for (let res of result) {
+                    tasks_array.push({
+                        id: res.id,
+                        name: res.task_name,
+                        description: res.task_description
+                    });
 
+                }
+                return res.json({branches: branch_array, tasks: tasks_array});
+
+            });
         });
     } catch (err) {
         logger.error(err);
         return res.json({status: false});
     }
-    console.log(branch_array);
 
 
 };
