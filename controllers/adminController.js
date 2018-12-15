@@ -161,21 +161,23 @@ exports.saveProductDetails = (req, res, next) => {
     var productDescription = req.body.productDescription;
     var tasks_length = req.body.tasks.length;
     var tasks = req.body.tasks;
-    var branchIds = req.body.branchIds;
-    var createdBy = req.body.createdBy;
+    var branchDetails = req.body.branchDetails;
     var productId = '';
 
-    var insert_product_query = "INSERT into `product_master` (product_name,product_description,number_of_task,created_by,created_time) VALUES(?)";
-    var insert_task_query = "INSERT into `product_master_steps` (task_name,task_description,created_by,created_time, product_master_id) VALUES(?)";
-    var insert_branch_product_query = "INSERT into `branch-product_master` (branch_id,product_id,created_by,created_date, active) VALUES(?)";
+    var insert_product_query = "INSERT into `product_master` (product_name,product_description,number_of_task,created_time) VALUES(?)";
+    var insert_task_query = "INSERT into `product_master_steps` (task_name,task_description,created_time, product_master_id) VALUES(?)";
+    var insert_branch_product_query = "INSERT into `branch-product_master` (branch_id,product_id,created_date, active) VALUES(?)";
 
+    branchIds = []
+    for(let branch of branchDetails){
+        branchIds.push(branch.branchId)
+    }
 
     try {
         var values = [
             productName,
             productDescription,
             tasks_length,
-            createdBy,
             new Date()];
 
         // insert into product table
@@ -187,9 +189,8 @@ exports.saveProductDetails = (req, res, next) => {
 
                 for (let task of tasks) {
                     var task_values = [
-                        task.name,
-                        task.description,
-                        createdBy,
+                        task.taskName,
+                        task.taskDescription,
                         new Date(),
                         product_id
                     ];
@@ -207,7 +208,6 @@ exports.saveProductDetails = (req, res, next) => {
                     product_branch_values = [
                         branch_id,
                         product_id,
-                        createdBy,
                         new Date(),
                         'Y'
                     ];
@@ -304,11 +304,10 @@ exports.editProductDetails = (req, res, next) => {
     var tasks_length = req.body.tasks.length;
     var tasks = req.body.tasks;
     var branchIds = req.body.branchIds;
-    var createdBy = req.body.createdBy;
     var product_id = req.body.productId;
 
     var delete_task_query = "delete from  `maithree-db`.product_master_steps where product_master_id =" + product_id;
-    var insert_task_query = "INSERT into `product_master_steps` (task_name,task_description,created_by,created_time, product_master_id) VALUES(?)";
+    var insert_task_query = "INSERT into `product_master_steps` (task_name,task_description,created_time, product_master_id) VALUES(?)";
     var update_product_query = "update `product_master` set product_name = ? , product_description = ?, number_of_task = ? where id = ? ";
 
 
@@ -331,7 +330,6 @@ exports.editProductDetails = (req, res, next) => {
                     var task_values = [
                         task.name,
                         task.description,
-                        createdBy,
                         new Date(),
                         product_id
                     ];
@@ -352,6 +350,112 @@ exports.editProductDetails = (req, res, next) => {
                     }
                 });
 
+            }
+        );
+
+
+    } catch (err) {
+        logger.error(err);
+        return res.json({status: false});
+    }
+    return res.json({status: true});
+
+};
+
+
+exports.addStudentDetails = (req, res, next) => {
+
+    var firstName = req.body.firstName;
+    var middleName = req.body.middleName;
+    var lastName = req.body.tasks.lastName;
+    var nickName = req.body.nickName;
+    var guardainName = req.body.guardainName;
+    var phoneNumber = req.body.phoneNumber;
+    var emailAddress = req.body.emailAddress;
+    var address = req.body.address;
+    var state = req.body.state;
+    var pincode = req.body.pincode;
+    var gender = req.body.gender;
+    var dob = req.body.dob;
+    var branchName = req.body.branchName;
+
+
+    var insert_student_query = "INSERT into `student_details` (first_name ,middle_name ,last_name ,nick_name ,guardain_name ,phone_number ,email_address ,address ,state ,pincode ,gender ,dob ,branch_id ,created_time) VALUES(?)";
+
+    var get_branch_id_query = "elect id from branch where name = " + branchName
+    var insert_task_query = "INSERT into `product_master_steps` (task_name,task_description,created_time, product_master_id) VALUES(?)";
+    var insert_branch_product_query = "INSERT into `branch-product_master` (branch_id,product_id,created_date, active) VALUES(?)";
+
+
+    try {
+
+
+        db.query(get_branch_id_query, function (err, result, fields) {
+            if (err) throw err;
+
+            branch_id = res.id;
+            console.log(branch_id)
+            var values = [
+                firstName,
+                middleName,
+                lastName,
+                nickName,
+                guardainName,
+                phoneNumber,
+                emailAddress,
+                address,
+                state,
+                pincode,
+                gender,
+                dob,
+                branch_id,
+                new Date()];
+
+        });
+
+
+
+
+
+        // insert into product table
+        db.query(insert_student_query, [values], function (err, result) {
+                if (err) {
+                    logger.error(err);
+                }
+                var product_id = result.insertId;
+
+                for (let task of tasks) {
+                    var task_values = [
+                        task.name,
+                        task.description,
+                        new Date(),
+                        product_id
+                    ];
+                    // insert into tasks table
+                    db.query(insert_task_query, [task_values], function (err, insRes) {
+                        if (err) {
+                            logger.error(err);
+                        }
+                    });
+
+                }
+
+                for (let branch_id of branchIds) {
+
+                    product_branch_values = [
+                        branch_id,
+                        product_id,
+                        new Date(),
+                        'Y'
+                    ];
+                    // insert into branch product mapping
+                    db.query(insert_branch_product_query, [product_branch_values], function (err, insRes) {
+                        if (err) {
+                            logger.error(err);
+                        }
+                    });
+
+                }
             }
         );
 

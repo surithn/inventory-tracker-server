@@ -20,7 +20,7 @@ adminRouter.route('/saveProduct')
     .all(function (req, res, next) {
         next();
     })
-    .post(adminController.saveProductDetails)
+    .post(adminController.saveProductDetails);
 
 adminRouter.route('/getProducts')
     .all(function (req, res, next) {
@@ -38,7 +38,13 @@ adminRouter.route('/editProduct')
     .all(function (req, res, next) {
         next();
     })
-    .post(adminController.editProductDetails)
+    .post(adminController.editProductDetails);
+
+adminRouter.route('/addStudent')
+    .all(function (req, res, next) {
+        next();
+    })
+    .post(adminController.addStudentDetails);
 
 
 
