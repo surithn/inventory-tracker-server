@@ -169,7 +169,7 @@ exports.saveProductDetails = (req, res, next) => {
     var insert_branch_product_query = "INSERT into `branch-product_master` (branch_id,product_id,created_date, active) VALUES(?)";
 
     branchIds = []
-    for(let branch of branchDetails){
+    for (let branch of branchDetails) {
         branchIds.push(branch.branchId)
     }
 
@@ -377,79 +377,45 @@ exports.addStudentDetails = (req, res, next) => {
     var pincode = req.body.pincode;
     var gender = req.body.gender;
     var dob = req.body.dob;
-    var branchName = req.body.branchName;
-
-
+    var branchId = req.body.branchId;
+    var tasks = req.body.tasks;
     var insert_student_query = "INSERT into `student_details` (first_name ,middle_name ,last_name ,nick_name ,guardain_name ,phone_number ,email_address ,address ,state ,pincode ,gender ,dob ,branch_id ,created_time) VALUES(?)";
-
-    var get_branch_id_query = "elect id from branch where name = " + branchName
-    var insert_task_query = "INSERT into `product_master_steps` (task_name,task_description,created_time, product_master_id) VALUES(?)";
-    var insert_branch_product_query = "INSERT into `branch-product_master` (branch_id,product_id,created_date, active) VALUES(?)";
-
-
+    var insert_student_task_mapping_query = "INSERT into `student_task_mapping_details` (product_master_id,product_master_steps_id,student_details_student_id,created_time) VALUES(?)";
     try {
-
-
-        db.query(get_branch_id_query, function (err, result, fields) {
-            if (err) throw err;
-
-            branch_id = res.id;
-            console.log(branch_id)
-            var values = [
-                firstName,
-                middleName,
-                lastName,
-                nickName,
-                guardainName,
-                phoneNumber,
-                emailAddress,
-                address,
-                state,
-                pincode,
-                gender,
-                dob,
-                branch_id,
-                new Date()];
-
-        });
-
-
-
-
+        var student_values = [
+            firstName,
+            middleName,
+            lastName,
+            nickName,
+            guardainName,
+            phoneNumber,
+            emailAddress,
+            address,
+            state,
+            pincode,
+            gender,
+            dob,
+            branchId,
+            new Date()];
 
         // insert into product table
-        db.query(insert_student_query, [values], function (err, result) {
+        db.query(insert_student_query, [student_values], function (err, result) {
                 if (err) {
                     logger.error(err);
                 }
-                var product_id = result.insertId;
+                var student_id = result.insertId;
+
 
                 for (let task of tasks) {
+
                     var task_values = [
-                        task.name,
-                        task.description,
-                        new Date(),
-                        product_id
+                        task.productId,
+                        task.taskId,
+                        student_id,
+                        new Date()
                     ];
-                    // insert into tasks table
-                    db.query(insert_task_query, [task_values], function (err, insRes) {
-                        if (err) {
-                            logger.error(err);
-                        }
-                    });
-
-                }
-
-                for (let branch_id of branchIds) {
-
-                    product_branch_values = [
-                        branch_id,
-                        product_id,
-                        new Date(),
-                        'Y'
-                    ];
-                    // insert into branch product mapping
-                    db.query(insert_branch_product_query, [product_branch_values], function (err, insRes) {
+                    // insert into student and tasks mapping table
+                    db.query(insert_student_task_mapping_query, [task_values], function (err, insRes) {
                         if (err) {
                             logger.error(err);
                         }
