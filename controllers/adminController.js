@@ -163,53 +163,133 @@ exports.saveProductDetails = (req, res, next) => {
     var tasks = req.body.tasks;
     var branchIds = req.body.branchIds;
     var createdBy = req.body.createdBy;
+    var productId = '';
 
-    var insert_product_query = "INSERT into `product_master` (product_name,product_description,number_of_task,created_by,created_time, branch_id) VALUES(?)";
+    var insert_product_query = "INSERT into `product_master` (product_name,product_description,number_of_task,created_by,created_time) VALUES(?)";
     var insert_task_query = "INSERT into `product_master_steps` (task_name,task_description,created_by,created_time, product_master_id) VALUES(?)";
+    var insert_branch_product_query = "INSERT into `branch-product_master` (branch_id,product_id,created_by,created_date, active) VALUES(?)";
 
-    for (let branch_id of branchIds) {
 
+    try {
         var values = [
             productName,
             productDescription,
             tasks_length,
             createdBy,
-            new Date(),
-            branch_id
-        ];
-        try {
-            db.query(insert_product_query, [values], function (err, result) {
-                    if (err) {
-                        logger.error(err);
-                    }
-                    var product_id = result.insertId;
+            new Date()];
 
-                    for (let task of tasks) {
-                        var task_values = [
-                            task.name,
-                            task.description,
-                            createdBy,
-                            new Date(),
-                            product_id
-                        ];
+        // insert into product table
+        db.query(insert_product_query, [values], function (err, result) {
+                if (err) {
+                    logger.error(err);
+                }
+                var product_id = result.insertId;
 
-                        db.query(insert_task_query, [task_values], function (err, insRes) {
-                            if (err) {
-                                logger.error(err);
-                            }
-                        });
-
-                    }
-
-
+                for (let task of tasks) {
+                    var task_values = [
+                        task.name,
+                        task.description,
+                        createdBy,
+                        new Date(),
+                        product_id
+                    ];
+                    // insert into tasks table
+                    db.query(insert_task_query, [task_values], function (err, insRes) {
+                        if (err) {
+                            logger.error(err);
+                        }
+                    });
 
                 }
-            );
-        } catch (err) {
-            logger.error(err);
-            return res.json({status: false});
-        }
+
+                for (let branch_id of branchIds) {
+
+                    product_branch_values = [
+                        branch_id,
+                        product_id,
+                        createdBy,
+                        new Date(),
+                        'Y'
+                    ];
+                    // insert into branch product mapping
+                    db.query(insert_branch_product_query, [product_branch_values], function (err, insRes) {
+                        if (err) {
+                            logger.error(err);
+                        }
+                    });
+
+                }
+            }
+        );
+
+
+    } catch (err) {
+        logger.error(err);
+        return res.json({status: false});
     }
     return res.json({status: true});
 
 }
+
+exports.getProducts = (req, res, next) => {
+
+    // console.log(req.query.branchId);
+    // var branch_id = req.query.branchId;
+
+
+    var get_products_query = "SELECT  a.id, a.product_name FROM `product_master` a ";
+    console.log(get_products_query)
+    var product_array = []
+
+    try {
+        db.query(get_products_query, function (err, result, fields) {
+            if (err) throw err;
+            for (let res of result) {
+                product_array.push({
+                    id: res.id,
+                    name: res.product_name
+                });
+
+            }
+            console.log(product_array)
+            return res.json(product_array);
+
+        });
+    } catch (err) {
+        logger.error(err);
+        return res.json({status: false});
+    }
+};
+
+exports.getBranchForProduct = (req, res, next) => {
+
+    console.log(req.query.branchId);
+    var product_id = req.query.productId;
+
+
+    var get_branch_for_product_query = "select a.branch_id, b.name from `product_master` a join `branch` b on a.branch_id = b.id where a.id = " + product_id;
+    console.log(get_branch_for_product_query)
+    var branch_array = []
+
+    try {
+        db.query(get_branch_for_product_query, function (err, result, fields) {
+            if (err) throw err;
+            for (let res of result) {
+                branch_array.push({
+                    id: res.id,
+                    name: res.product_name
+                });
+
+            }
+            console.log(branch_array)
+            return res.json(branch_array);
+
+        });
+    } catch (err) {
+        logger.error(err);
+        return res.json({status: false});
+    }
+    console.log(branch_array);
+
+
+};
