@@ -452,7 +452,7 @@ exports.addStudentDetails = (req, res, next) => {
 
     var firstName = req.body.firstName;
     var middleName = req.body.middleName;
-    var lastName = req.body.tasks.lastName;
+    var lastName = req.body.lastName;
     var nickName = req.body.nickName;
     var guardainName = req.body.guardainName;
     var phoneNumber = req.body.phoneNumber;
