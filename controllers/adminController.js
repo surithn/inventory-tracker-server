@@ -487,11 +487,14 @@ exports.addStudentDetails = (req, res, next) => {
         db.query(insert_student_query, [student_values], function (err, result) {
                 if (err) {
                     logger.error(err);
+                    res.json({status: false});
+
                 } else {
                     var student_id = result.insertId;
 
+                    async.forEach(tasks, processEachTask, onProcessCompletedForAllTasks);
 
-                    for (let task of tasks) {
+                    function processEachTask (task, callbackFromTask) {
 
                         var task_values = [
                             task.productId,
@@ -503,13 +506,31 @@ exports.addStudentDetails = (req, res, next) => {
                         db.query(insert_student_task_mapping_query, [task_values], function (err, insRes) {
                             if (err) {
                                 logger.error(err);
+                                callbackFromTask(err);
+
                             }
+                            console.log("completed task",  insRes);
+                            callbackFromTask(null);
+
                         });
+                    }
+
+                    function onProcessCompletedForAllTasks(err) {
+                        console.log("Al tasks added    " , err);
+                        if (err) {
+                            console.log("Al tasks added errr    " , err);
+
+                            res.json({status: false});
+                        }
+                        else {
+                            console.log("Al tasks added no err   " , err);
+
+                            res.json({status: true});
+                        }
 
                     }
-                    return res.json({status: true});
-
                 }
+
             }
         );
 
@@ -518,9 +539,6 @@ exports.addStudentDetails = (req, res, next) => {
         logger.error(err);
         return res.json({status: false});
     }
-    //mandatory fields not handled in UI. So by default false is sent as response and true will be sent if the request succeded
-    return res.json({status: false});
-
 };
 
 
