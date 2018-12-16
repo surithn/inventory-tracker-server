@@ -161,14 +161,15 @@ exports.saveProductDetails = (req, res, next) => {
     var productDescription = req.body.productDescription;
     var tasks_length = req.body.tasks.length;
     var tasks = req.body.tasks;
+    var is_activity = req.body.isActivity
     var branchDetails = req.body.branchDetails;
     var productId = '';
 
-    var insert_product_query = "INSERT into `product_master` (product_name,product_description,number_of_task,created_time) VALUES(?)";
+    var insert_product_query = "INSERT into `product_master` (product_name,product_description,is_activity,number_of_task,created_time) VALUES(?)";
     var insert_task_query = "INSERT into `product_master_steps` (task_name,task_description,created_time, product_master_id) VALUES(?)";
     var insert_branch_product_query = "INSERT into `branch-product_master` (branch_id,product_id,created_date, active) VALUES(?)";
 
-    branchIds = []
+    branchIds = [];
     for (let branch of branchDetails) {
         branchIds.push(branch.id)
     }
@@ -177,6 +178,7 @@ exports.saveProductDetails = (req, res, next) => {
         var values = [
             productName,
             productDescription,
+            is_activity,
             tasks_length,
             new Date()];
 
@@ -234,7 +236,7 @@ exports.saveProductDetails = (req, res, next) => {
 exports.getProducts = (req, res, next) => {
 
 
-    var get_products_query = "SELECT  a.id, a.product_name,a.product_description FROM `product_master` a ";
+    var get_products_query = "SELECT  a.id, a.product_name,a.product_description, a.is_activity FROM `product_master` a ";
     var product_array = []
 
     try {
@@ -244,7 +246,9 @@ exports.getProducts = (req, res, next) => {
                 product_array.push({
                     id: res.id,
                     name: res.product_name,
-                    description: res.product_description
+                    description: res.product_description,
+                    isActivity: res.is_activity
+
                 });
 
             }
@@ -261,6 +265,8 @@ exports.getProductDetails = (req, res, next) => {
 
     var product_id = req.query.productId;
 
+    // joined with product to get desc which is not required as of now
+    // var get_branch_for_product_query = "SELECT a.branch_id,b.name, c.product_description, c.is_activity  from `branch-product_master` a  join `branch` b  on a.branch_id=b.id join  `maithree-db`.product_master c on c.id = a.product_id where a.product_id=" + product_id;
 
     var get_branch_for_product_query = "SELECT a.branch_id,b.name from `branch-product_master` a  join `branch` b  on a.branch_id=b.id where a.product_id= " + product_id;
     var get_tasks_for_product_query = "select id,task_name, task_description from `maithree-db`.product_master_steps where product_master_id =" + product_id;
@@ -304,12 +310,13 @@ exports.editProductDetails = (req, res, next) => {
     var tasks_length = req.body.tasks.length;
     var tasks = req.body.tasks;
     var branchDetails = req.body.branchDetails;
-
+    var isActivity = req.body.isActivity;
+    console.log("isActivity" + isActivity)
     var product_id = req.body.productId;
 
     var delete_task_query = "delete from  `product_master_steps` where product_master_id =" + product_id;
     var insert_task_query = "INSERT into `product_master_steps` (task_name,task_description,created_time, product_master_id) VALUES(?)";
-    var update_product_query = "update `product_master` set product_name = ? , product_description = ?, number_of_task = ? where id = ? ";
+    var update_product_query = "update `product_master` set number_of_task = ?, is_activity = ? where id = ? ";
     var delete_branch_product_mapping_query = "delete from `branch-product_master` where product_id =" + product_id;
     var insert_branch_product_query = "INSERT into `branch-product_master` (branch_id,product_id,created_date, active) VALUES(?)";
 
@@ -319,12 +326,6 @@ exports.editProductDetails = (req, res, next) => {
     }
 
     try {
-        var values = [
-            productName,
-            productDescription,
-            tasks_length,
-            new Date()];
-
         // delete tasks into product table
         db.query(delete_task_query, function (err, result, fields) {
                 if (err) {
@@ -349,7 +350,7 @@ exports.editProductDetails = (req, res, next) => {
 
                 // update product
 
-                db.query(update_product_query, [productName, productDescription, tasks_length, product_id], function (err, result) {
+                db.query(update_product_query, [tasks_length, isActivity, product_id], function (err, result) {
 
                     if (err) {
                         logger.error(err);
@@ -451,7 +452,7 @@ exports.addStudentDetails = (req, res, next) => {
 
     var firstName = req.body.firstName;
     var middleName = req.body.middleName;
-    var lastName = req.body.tasks.lastName;
+    var lastName = req.body.lastName;
     var nickName = req.body.nickName;
     var guardainName = req.body.guardainName;
     var phoneNumber = req.body.phoneNumber;
@@ -482,12 +483,114 @@ exports.addStudentDetails = (req, res, next) => {
             branchId,
             new Date()];
 
-        // insert into product table
+        // insert into student table
         db.query(insert_student_query, [student_values], function (err, result) {
                 if (err) {
                     logger.error(err);
+                    res.json({status: false});
+
+                } else {
+                    var student_id = result.insertId;
+
+                    async.forEach(tasks, processEachTask, onProcessCompletedForAllTasks);
+
+                    function processEachTask (task, callbackFromTask) {
+
+                        var task_values = [
+                            task.productId,
+                            task.taskId,
+                            student_id,
+                            new Date()
+                        ];
+                        // insert into student and tasks mapping table
+                        db.query(insert_student_task_mapping_query, [task_values], function (err, insRes) {
+                            if (err) {
+                                logger.error(err);
+                                callbackFromTask(err);
+
+                            }
+                            console.log("completed task",  insRes);
+                            callbackFromTask(null);
+
+                        });
+                    }
+
+                    function onProcessCompletedForAllTasks(err) {
+                        console.log("Al tasks added    " , err);
+                        if (err) {
+                            console.log("Al tasks added errr    " , err);
+
+                            res.json({status: false});
+                        }
+                        else {
+                            console.log("Al tasks added no err   " , err);
+
+                            res.json({status: true});
+                        }
+
+                    }
                 }
-                var student_id = result.insertId;
+
+            }
+        );
+
+
+    } catch (err) {
+        logger.error(err);
+        return res.json({status: false});
+    }
+};
+
+
+exports.editStudentDetails = (req, res, next) => {
+
+    var firstName = req.body.firstName;
+    var middleName = req.body.middleName;
+    var lastName = req.body.tasks.lastName;
+    var nickName = req.body.nickName;
+    var guardainName = req.body.guardainName;
+    var phoneNumber = req.body.phoneNumber;
+    var emailAddress = req.body.emailAddress;
+    var address = req.body.address;
+    var state = req.body.state;
+    var pincode = req.body.pincode;
+    var gender = req.body.gender;
+    var dob = req.body.dob;
+    var branchId = req.body.branchId;
+    var tasks = req.body.tasks;
+    var studentId = req.body.studentId;
+
+
+    var delete_student_task_mapping_query = "delete from  `student_task_mapping_details` where student_details_student_id =" + studentId;
+    var insert_student_task_mapping_query = "INSERT into `student_task_mapping_details` (product_master_id,product_master_steps_id,student_details_student_id,created_time) VALUES(?)";
+
+    var update_student_query = "update `student_details` set first_name = ? ,middle_name = ?,last_name = ?,nick_name = ?,guardain_name = ?,phone_number = ?,email_address = ?,address = ?,state = ?,pincode = ?,gender = ?,dob = ?,branch_id = ?,created_time= ? where student_id = ? ";
+    var update_product_query = "update `product_master` set product_name = ? , product_description = ?, number_of_task = ? where id = ? ";
+
+
+    try {
+        var student_values = [
+            firstName,
+            middleName,
+            lastName,
+            nickName,
+            guardainName,
+            phoneNumber,
+            emailAddress,
+            address,
+            state,
+            pincode,
+            gender,
+            dob,
+            branchId,
+            new Date(),
+            studentId];
+
+        // delete from student task mapping table
+        db.query(delete_student_task_mapping_query, function (err, result, fields) {
+                if (err) {
+                    logger.error(err);
+                }
 
 
                 for (let task of tasks) {
@@ -495,7 +598,7 @@ exports.addStudentDetails = (req, res, next) => {
                     var task_values = [
                         task.productId,
                         task.taskId,
-                        student_id,
+                        studentId,
                         new Date()
                     ];
                     // insert into student and tasks mapping table
@@ -506,6 +609,15 @@ exports.addStudentDetails = (req, res, next) => {
                     });
 
                 }
+
+                // update student
+
+                db.query(update_student_query, student_values, function (err, result) {
+
+                    if (err) {
+                        logger.error(err);
+                    }
+                });
             }
         );
 
