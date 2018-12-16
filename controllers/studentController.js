@@ -27,7 +27,7 @@ exports.getStudentsByBranch = (req,res,next) => {
 
 exports.getProductsForStudent = (req,res,next) => {
 
-    var sql = "SELECT prod.id as productId, prod.product_name as productName from `maithree-db`.`student_task_mapping_details` stud_task join `maithree-db`.product_master prod ON stud_task.product_master_id = prod.id where stud_task.student_details_student_id = ?";
+    var sql = "SELECT distinct(prod.id) as productId, prod.product_name as productName from `maithree-db`.`student_task_mapping_details` stud_task join `maithree-db`.product_master prod ON stud_task.product_master_id = prod.id where stud_task.student_details_student_id = ?";
     var studentId = req.body.studentId;
     logger.info(`Get Products for Student id ::: ${studentId}`);
 
@@ -60,7 +60,7 @@ exports.getTasksMappedForProduct = (req,res,next) => {
              return next(err);
            }
            var transformed_response = result.map((each_obj) => {
-                if (!each_obj.target || !each_obj.completed) {        
+                if (each_obj.target === null && each_obj.completed === null) {        
                     each_obj.assigned = false;
                     each_obj.target = 0;
                     each_obj.completed = 0;
@@ -402,27 +402,34 @@ exports.saveStudentTrackingDetails = (req,res,next) => {
 
     var taskdetails = req.body.task;
 
-    var insert_query_for_student_task_mapping = "INSERT into `student_task_mapping_details` (product_master_id, product_master_steps_id, student_details_student_id) values (?)";
+    var select_query_for_student_task_mapping = "SELECT mapping_id from `student_task_mapping_details` where student_details_student_id = ? AND product_master_id = ? AND product_master_steps_id = ? ";
 
     var tracking_ids = [];
 
     async.forEach(taskdetails, processEachTaskDetail, onProcessCompletedForAllTaskDetail);
 
     function processEachTaskDetail(each_task_detail, callbackFromTaskMapping) {
-        var values = [req.body.productId, each_task_detail.id, req.body.studentId];
+        var values = [req.body.studentId, req.body.productId, each_task_detail.id];
         
-        db.query(insert_query_for_student_task_mapping, [values], (err, insResult) => {
+        db.query(select_query_for_student_task_mapping, values, (err, mappingResult) => {
             
-            each_task_detail.mappingId = insResult.insertId;
+            each_task_detail.mappingId = mappingResult[0].mapping_id;
             
-            // For each task, add entry to the tracking table
-            var insert_query_for_student_task_tracking = "INSERT into `student_task_tracking` ( `target`,`completed`, `date`,`student_task_mapping_details_mapping_id`) values (?)"
-            var tracking_values = [each_task_detail.target, each_task_detail.completed, new Date(), each_task_detail.mappingId]
+            var delete_previous_tracking_for_student = "DELETE from `student_task_tracking` WHERE  student_task_mapping_details_mapping_id = ?";
 
-            db.query(insert_query_for_student_task_tracking, [tracking_values], (err, trackingResult) => {
-                tracking_ids.push(trackingResult.insertId);
-                logger.info(" Student tracking details saved for student ::: ", req.body.studentId, " , tracking id is ::: ", trackingResult.insertId);
-                callbackFromTaskMapping(null);
+            db.query(delete_previous_tracking_for_student, [each_task_detail.mappingId], (err, deleteResult) => {
+
+                logger.info(" Previous tracking details deleted ::: ", JSON.stringify(deleteResult));
+
+                // For each task, add entry to the tracking table
+                var insert_query_for_student_task_tracking = "INSERT into `student_task_tracking` ( `target`,`completed`, `date`,`student_task_mapping_details_mapping_id`) values (?)"
+                var tracking_values = [each_task_detail.target, each_task_detail.completed, new Date(), each_task_detail.mappingId]
+
+                db.query(insert_query_for_student_task_tracking, [tracking_values], (err, trackingResult) => {
+                    tracking_ids.push(trackingResult.insertId);
+                    logger.info(" Student tracking details saved for student ::: ", req.body.studentId, " , tracking id is ::: ", trackingResult.insertId);
+                    callbackFromTaskMapping(null);
+                })
             })
         })
     }
