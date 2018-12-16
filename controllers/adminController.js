@@ -310,13 +310,13 @@ exports.editProductDetails = (req, res, next) => {
     var tasks_length = req.body.tasks.length;
     var tasks = req.body.tasks;
     var branchDetails = req.body.branchDetails;
-    var isActivity = req.isActivity;
-
+    var isActivity = req.body.isActivity;
+    console.log("isActivity" + isActivity)
     var product_id = req.body.productId;
 
     var delete_task_query = "delete from  `product_master_steps` where product_master_id =" + product_id;
     var insert_task_query = "INSERT into `product_master_steps` (task_name,task_description,created_time, product_master_id) VALUES(?)";
-    var update_product_query = "update `product_master` set product_name = ? , product_description = ?, number_of_task = ?, is_activity = ? where id = ? ";
+    var update_product_query = "update `product_master` set number_of_task = ?, is_activity = ? where id = ? ";
     var delete_branch_product_mapping_query = "delete from `branch-product_master` where product_id =" + product_id;
     var insert_branch_product_query = "INSERT into `branch-product_master` (branch_id,product_id,created_date, active) VALUES(?)";
 
@@ -326,13 +326,6 @@ exports.editProductDetails = (req, res, next) => {
     }
 
     try {
-        var values = [
-            productName,
-            productDescription,
-            tasks_length,
-            isActivity,
-            new Date()];
-
         // delete tasks into product table
         db.query(delete_task_query, function (err, result, fields) {
                 if (err) {
@@ -357,7 +350,7 @@ exports.editProductDetails = (req, res, next) => {
 
                 // update product
 
-                db.query(update_product_query, [productName, productDescription, tasks_length, product_id], function (err, result) {
+                db.query(update_product_query, [tasks_length, isActivity, product_id], function (err, result) {
 
                     if (err) {
                         logger.error(err);
@@ -517,12 +510,12 @@ exports.addStudentDetails = (req, res, next) => {
             }
         );
 
+        return res.json({status: true});
 
     } catch (err) {
         logger.error(err);
         return res.json({status: false});
     }
-    return res.json({status: true});
 
 };
 
