@@ -161,14 +161,15 @@ exports.saveProductDetails = (req, res, next) => {
     var productDescription = req.body.productDescription;
     var tasks_length = req.body.tasks.length;
     var tasks = req.body.tasks;
+    var is_activity = req.body.isActivity
     var branchDetails = req.body.branchDetails;
     var productId = '';
 
-    var insert_product_query = "INSERT into `product_master` (product_name,product_description,number_of_task,created_time) VALUES(?)";
+    var insert_product_query = "INSERT into `product_master` (product_name,product_description,is_activity,number_of_task,created_time) VALUES(?)";
     var insert_task_query = "INSERT into `product_master_steps` (task_name,task_description,created_time, product_master_id) VALUES(?)";
     var insert_branch_product_query = "INSERT into `branch-product_master` (branch_id,product_id,created_date, active) VALUES(?)";
 
-    branchIds = []
+    branchIds = [];
     for (let branch of branchDetails) {
         branchIds.push(branch.id)
     }
@@ -177,6 +178,7 @@ exports.saveProductDetails = (req, res, next) => {
         var values = [
             productName,
             productDescription,
+            is_activity,
             tasks_length,
             new Date()];
 
@@ -234,7 +236,7 @@ exports.saveProductDetails = (req, res, next) => {
 exports.getProducts = (req, res, next) => {
 
 
-    var get_products_query = "SELECT  a.id, a.product_name,a.product_description FROM `product_master` a ";
+    var get_products_query = "SELECT  a.id, a.product_name,a.product_description, a.is_activity FROM `product_master` a ";
     var product_array = []
 
     try {
@@ -244,7 +246,9 @@ exports.getProducts = (req, res, next) => {
                 product_array.push({
                     id: res.id,
                     name: res.product_name,
-                    description: res.product_description
+                    description: res.product_description,
+                    isActivity: res.is_activity
+
                 });
 
             }
@@ -261,6 +265,8 @@ exports.getProductDetails = (req, res, next) => {
 
     var product_id = req.query.productId;
 
+    // joined with product to get desc which is not required as of now
+    // var get_branch_for_product_query = "SELECT a.branch_id,b.name, c.product_description, c.is_activity  from `branch-product_master` a  join `branch` b  on a.branch_id=b.id join  `maithree-db`.product_master c on c.id = a.product_id where a.product_id=" + product_id;
 
     var get_branch_for_product_query = "SELECT a.branch_id,b.name from `branch-product_master` a  join `branch` b  on a.branch_id=b.id where a.product_id= " + product_id;
     var get_tasks_for_product_query = "select id,task_name, task_description from `maithree-db`.product_master_steps where product_master_id =" + product_id;
@@ -304,12 +310,13 @@ exports.editProductDetails = (req, res, next) => {
     var tasks_length = req.body.tasks.length;
     var tasks = req.body.tasks;
     var branchDetails = req.body.branchDetails;
+    var isActivity = req.isActivity;
 
     var product_id = req.body.productId;
 
     var delete_task_query = "delete from  `product_master_steps` where product_master_id =" + product_id;
     var insert_task_query = "INSERT into `product_master_steps` (task_name,task_description,created_time, product_master_id) VALUES(?)";
-    var update_product_query = "update `product_master` set product_name = ? , product_description = ?, number_of_task = ? where id = ? ";
+    var update_product_query = "update `product_master` set product_name = ? , product_description = ?, number_of_task = ?, is_activity = ? where id = ? ";
     var delete_branch_product_mapping_query = "delete from `branch-product_master` where product_id =" + product_id;
     var insert_branch_product_query = "INSERT into `branch-product_master` (branch_id,product_id,created_date, active) VALUES(?)";
 
@@ -323,6 +330,7 @@ exports.editProductDetails = (req, res, next) => {
             productName,
             productDescription,
             tasks_length,
+            isActivity,
             new Date()];
 
         // delete tasks into product table
