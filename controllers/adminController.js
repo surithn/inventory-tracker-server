@@ -487,35 +487,39 @@ exports.addStudentDetails = (req, res, next) => {
         db.query(insert_student_query, [student_values], function (err, result) {
                 if (err) {
                     logger.error(err);
-                }
-                var student_id = result.insertId;
+                } else {
+                    var student_id = result.insertId;
 
 
-                for (let task of tasks) {
+                    for (let task of tasks) {
 
-                    var task_values = [
-                        task.productId,
-                        task.taskId,
-                        student_id,
-                        new Date()
-                    ];
-                    // insert into student and tasks mapping table
-                    db.query(insert_student_task_mapping_query, [task_values], function (err, insRes) {
-                        if (err) {
-                            logger.error(err);
-                        }
-                    });
+                        var task_values = [
+                            task.productId,
+                            task.taskId,
+                            student_id,
+                            new Date()
+                        ];
+                        // insert into student and tasks mapping table
+                        db.query(insert_student_task_mapping_query, [task_values], function (err, insRes) {
+                            if (err) {
+                                logger.error(err);
+                            }
+                        });
+
+                    }
+                    return res.json({status: true});
 
                 }
             }
         );
 
-        return res.json({status: true});
 
     } catch (err) {
         logger.error(err);
         return res.json({status: false});
     }
+    //mandatory fields not handled in UI. So by default false is sent as response and true will be sent if the request succeded
+    return res.json({status: false});
 
 };
 
