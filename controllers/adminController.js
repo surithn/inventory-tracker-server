@@ -482,7 +482,7 @@ exports.addStudentDetails = (req, res, next) => {
             branchId,
             new Date()];
 
-        // insert into product table
+        // insert into student table
         db.query(insert_student_query, [student_values], function (err, result) {
                 if (err) {
                     logger.error(err);
@@ -506,6 +506,95 @@ exports.addStudentDetails = (req, res, next) => {
                     });
 
                 }
+            }
+        );
+
+
+    } catch (err) {
+        logger.error(err);
+        return res.json({status: false});
+    }
+    return res.json({status: true});
+
+};
+
+
+exports.editStudentDetails = (req, res, next) => {
+
+    var firstName = req.body.firstName;
+    var middleName = req.body.middleName;
+    var lastName = req.body.tasks.lastName;
+    var nickName = req.body.nickName;
+    var guardainName = req.body.guardainName;
+    var phoneNumber = req.body.phoneNumber;
+    var emailAddress = req.body.emailAddress;
+    var address = req.body.address;
+    var state = req.body.state;
+    var pincode = req.body.pincode;
+    var gender = req.body.gender;
+    var dob = req.body.dob;
+    var branchId = req.body.branchId;
+    var tasks = req.body.tasks;
+    var studentId = req.body.studentId;
+
+
+    var delete_student_task_mapping_query = "delete from  `student_task_mapping_details` where student_details_student_id =" + studentId;
+    var insert_student_task_mapping_query = "INSERT into `student_task_mapping_details` (product_master_id,product_master_steps_id,student_details_student_id,created_time) VALUES(?)";
+
+    var update_student_query = "update `student_details` set first_name = ? ,middle_name = ?,last_name = ?,nick_name = ?,guardain_name = ?,phone_number = ?,email_address = ?,address = ?,state = ?,pincode = ?,gender = ?,dob = ?,branch_id = ?,created_time= ? where student_id = ? ";
+    var update_product_query = "update `product_master` set product_name = ? , product_description = ?, number_of_task = ? where id = ? ";
+
+
+    try {
+        var student_values = [
+            firstName,
+            middleName,
+            lastName,
+            nickName,
+            guardainName,
+            phoneNumber,
+            emailAddress,
+            address,
+            state,
+            pincode,
+            gender,
+            dob,
+            branchId,
+            new Date(),
+            studentId];
+
+        // delete from student task mapping table
+        db.query(delete_student_task_mapping_query, function (err, result, fields) {
+                if (err) {
+                    logger.error(err);
+                }
+
+
+                for (let task of tasks) {
+
+                    var task_values = [
+                        task.productId,
+                        task.taskId,
+                        studentId,
+                        new Date()
+                    ];
+                    // insert into student and tasks mapping table
+                    db.query(insert_student_task_mapping_query, [task_values], function (err, insRes) {
+                        if (err) {
+                            logger.error(err);
+                        }
+                    });
+
+                }
+
+                // update student
+
+                db.query(update_student_query, student_values, function (err, result) {
+
+                    if (err) {
+                        logger.error(err);
+                    }
+                });
             }
         );
 
