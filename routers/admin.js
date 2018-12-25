@@ -52,6 +52,12 @@ adminRouter.route('/addStudent')
     })
     .post(adminController.addStudentDetails);
 
+adminRouter.route('/editStudent')
+    .all(function (req, res, next) {
+        next();
+    })
+    .post(adminController.editStudentDetails);
+
 
 
 //getBranchProductDetailsForTarget
