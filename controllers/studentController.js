@@ -198,6 +198,8 @@ exports.getStudentProductMappingDetailsForBranchOld = (req,res,next) => {
 
 }
 
+
+/*
 exports.getStudentProductMappingDetailsForBranchOldv2 = (req,res,next) => {
 
     var select_student_query = "SELECT student_id, CONCAT(first_name, ' ', last_name) as name from `student_details` where branch_id = ?";
@@ -372,31 +374,14 @@ exports.getStudentProductMappingDetailsForBranchOldv2 = (req,res,next) => {
                 })
                 student_details.products = products_for_student;
                 consolidated_student_mapping.push(student_details);
-            }) */            
+            })             
        })       
     } catch (err) {
         logger.error(err);
         next(err);
     }
 
-}
-
-exports.getStudentProductMappingDetailsForBranch = (req,res,next) => {
-
-    //var select_student_query = "select stud.student_id as student_id, CONCAT(first_name, ' ' , last_name) as student_name, prod.id as product_id, prod.product_name, steps.id as task_id, task_name, task_description, target, completed, date from `maithree-db`.student_details stud join `maithree-db`.student_task_mapping_details stud_task ON stud.student_id =  stud_task.student_details_student_id JOIN `maithree-db`.product_master prod on stud_task.product_master_id = prod.id  JOIN `maithree-db`.product_master_steps steps ON stud_task.product_master_steps_id = steps.id AND steps.product_master_id = prod.id LEFT OUTER JOIN (select * from `maithree-db`.student_task_tracking where date = current_date()) tracking ON stud_task.mapping_id = tracking.student_task_mapping_details_mapping_id where stud.branch_id = ? order by student_id, product_id, task_id";
-
-    var select_student_query = "select stud.student_id as student_id, CONCAT(first_name, ' ' , last_name) as student_name, prod.id as product_id, prod.product_name, steps.id as task_id, task_name, task_description, target, completed, date from `maithree-db`.student_details stud join `maithree-db`.student_task_mapping_details stud_task ON stud.student_id =  stud_task.student_details_student_id JOIN `maithree-db`.product_master prod on stud_task.product_master_id = prod.id  JOIN `maithree-db`.product_master_steps steps ON stud_task.product_master_steps_id = steps.id AND steps.product_master_id = prod.id LEFT OUTER JOIN (select * from `maithree-db`.student_task_tracking where date = current_date()) tracking ON stud_task.mapping_id = tracking.student_task_mapping_details_mapping_id where stud.branch_id = ? order by student_id, product_id, task_id";
-
-    var branchId = req.params.id;
-    logger.info(`Get students for branch id ::: ${branchId}`);
-    var student_ids = [];
-    var students_task_mapping_ids = [];
-
-    db.query(select_student_query,[branchId], (err, result) => {
-        logger.info(" Result from join query ::: " , JSON.stringify(result));
-        res.json(result);
-    })
-}
+}*/
 
 exports.saveStudentTrackingDetails = (req,res,next) => {
 
@@ -405,6 +390,10 @@ exports.saveStudentTrackingDetails = (req,res,next) => {
     var select_query_for_student_task_mapping = "SELECT mapping_id from `student_task_mapping_details` where student_details_student_id = ? AND product_master_id = ? AND product_master_steps_id = ? ";
 
     var tracking_ids = [];
+
+    var today = moment().format('YYYY-MM-DD');
+
+    logger.info("Today is :::: ", today);
 
     async.forEach(taskdetails, processEachTaskDetail, onProcessCompletedForAllTaskDetail);
 
@@ -415,15 +404,15 @@ exports.saveStudentTrackingDetails = (req,res,next) => {
             
             each_task_detail.mappingId = mappingResult[0].mapping_id;
             
-            var delete_previous_tracking_for_student = "DELETE from `student_task_tracking` WHERE  student_task_mapping_details_mapping_id = ?";
+            var delete_previous_tracking_for_student = "DELETE from `student_task_tracking` WHERE  student_task_mapping_details_mapping_id = ? AND date = ?";
 
-            db.query(delete_previous_tracking_for_student, [each_task_detail.mappingId], (err, deleteResult) => {
+            db.query(delete_previous_tracking_for_student, [each_task_detail.mappingId, today], (err, deleteResult) => {
 
                 logger.info(" Previous tracking details deleted ::: ", JSON.stringify(deleteResult));
 
                 // For each task, add entry to the tracking table
                 var insert_query_for_student_task_tracking = "INSERT into `student_task_tracking` ( `target`,`completed`, `date`,`student_task_mapping_details_mapping_id`) values (?)"
-                var tracking_values = [each_task_detail.target, each_task_detail.completed, new Date(), each_task_detail.mappingId]
+                var tracking_values = [each_task_detail.target, each_task_detail.completed, today, each_task_detail.mappingId]
 
                 db.query(insert_query_for_student_task_tracking, [tracking_values], (err, trackingResult) => {
                     tracking_ids.push(trackingResult.insertId);
