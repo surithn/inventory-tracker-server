@@ -52,12 +52,14 @@ branchRouter.route('/:id/targets')
 .post(branchController.createTargetsByBranchId);
 
 // Get Student product mapping for a branch
+/*
 branchRouter.route('/:id/getStudentMapping')
 .all(function(req,res,next) {
     console.log(' inside branch router with getStudentMapping ::: ', req.params.id);
     next();
 })
 .get(studentController.getStudentProductMappingDetailsForBranch)
+*/
 
 // Get Student details for a branch
 branchRouter.route('/:id/getStudents')
@@ -82,6 +84,14 @@ branchRouter.route('/:id/getTasksForProduct')
     next();
 })
 .post(studentController.getTasksMappedForProduct)
+
+// Get Task details for a product
+branchRouter.route('/:id/studentProgress')
+.all(function(req,res,next) {
+    console.log(' Inside branch router with getStudentProgress for student ::: ', req.query.studentId);
+    next();
+})
+.get(studentController.getStudentProgressAcrossWeeks)
 
 // Get Task details for a product
 branchRouter.route('/:id/saveStudentTracking')
