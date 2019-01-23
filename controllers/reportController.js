@@ -3,6 +3,7 @@ var reportOpertaion = require("../db/reportOperations");
 var moment = require("moment");
 var async = require("async");
 var getTargetCountByBranchId = require("../controllers/targetController").getTargetCountByBranchId;
+var db = require("../db/config");
 
 var _ = require("lodash");
 
@@ -148,5 +149,76 @@ function doSomeProcessing(data) {
     } catch(error) {
         logger.error(err);
         return {};
+    }
+}
+
+exports.fetchSummaryCount = (req, res, next) => {
+
+    var staffCount_sql = "SELECT count(*) as staffCount FROM `maithree-db`.member where is_admin = 'Y' and active = 'Y'";
+    var branchCount_sql = "SELECT count(*) as branchCount FROM `maithree-db`.branch where active = 'Y'";
+    var studentsCount_sql = "SELECT count(student_id) as studentsCount FROM `maithree-db`.student_details";
+    var productsCount_sql = "SELECT count(*) as productsCount FROM `maithree-db`.product_master where is_activity != NULL OR is_activity != 'Y'";
+
+    var summary_data = [];
+
+    async.series([
+        function(callback) {
+            executeQuery(branchCount_sql, function (data) {
+                summary_data.push ({
+                    "name" : "Branches",
+                    "value" : "branches",
+                    "count" : data[0].branchCount
+                })
+                callback(null);
+            });
+        },
+        function(callback) {
+            executeQuery(staffCount_sql, function (data) {
+                summary_data.push ({
+                    "name" : "Staffs",
+                    "value" : "staffs",
+                    "count" : data[0].staffCount
+                })
+                callback(null);
+            });
+        },
+        function(callback) {
+            executeQuery(studentsCount_sql, function (data) {
+                summary_data.push ({
+                    "name" : "Students",
+                    "value" : "students",
+                    "count" : data[0].studentsCount
+                })
+                callback(null);
+            });
+        },
+        function(callback) {
+            executeQuery(productsCount_sql, function (data) {
+                summary_data.push ({
+                    "name" : "Products",
+                    "value" : "Products",
+                    "count" : data[0].productsCount
+                })
+                callback(null);
+            });
+        }, function (err, results) {
+            console.log(JSON.stringify(summary_data));
+            res.json(summary_data);
+        }
+    ])
+}
+
+function executeQuery(sqlQuery, cb) {
+    try {
+
+        db.query(sqlQuery, function (err, result) {
+            if (err) {
+                logger.error(err);
+                cb(err);
+            }            
+            cb(result);
+        });
+    } catch (err) {
+        cb(err);
     }
 }
