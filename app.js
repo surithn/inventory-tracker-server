@@ -102,9 +102,10 @@ app.use(session({
 //app.use('/server/api/v1/branches', authMiddleware, router.branchRouter)
 // TODO : Need to comment below during demo. 
 app.use('/server/api/v1/branches', router.branchRouter);
-
+app.use('/server/api/v1/student', router.studentRouter);
 app.use('/server/api/v1/inventories', authMiddleware ,router.inventoryRouter);
-app.use('/server/api/v1/reports', authMiddleware ,router.reportRouter);
+//app.use('/server/api/v1/reports', authMiddleware ,router.reportRouter);
+app.use('/server/api/v1/reports', router.reportRouter);
 app.use('/server/api/v1/branchProduct', authMiddleware ,router.branchProductRouter)
 
 app.use('/server/api/v1/target',authMiddleware, router.targetRouter)
