@@ -7,7 +7,7 @@ var async = require("async");
 var _ = require("lodash");
 
 exports.getStudentsByBranch = (req,res,next) => {
-    var sql = "SELECT student_id as studentId, CONCAT(first_name, ' ' , last_name) as studentName from `student_details` where branch_id = ?";
+    var sql = "SELECT student_id as studentId, first_name as firstName, last_name as lastName from `student_details` where branch_id = ?";
     var branchId = req.params.id
     logger.info(`Get students for branch id ::: ${branchId}`);
     try {
