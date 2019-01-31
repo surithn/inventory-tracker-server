@@ -62,7 +62,7 @@ exports.getInventriesCountByBranchId =  function(req,res,next) {
                 })
             },
             target : function(cbl) {
-                getTargetCountByBranchId({id : req.params.branchId, startDate : getFormattedStartMonth(month), 
+                getTargetCountByBranchId({id : req.params.branchId, startDate : getFormattedStartMonth(month),
                 endDate: getFormattedEndDate(month)}, function(err, result){
                     if(err) {
                         logger.error(err);
@@ -70,12 +70,12 @@ exports.getInventriesCountByBranchId =  function(req,res,next) {
                     inventoryData.target = result;
                     cbl(null,[]);
                 });
-            }   
+            }
 
         }, function(err, rslt){
             summaryArr.push(inventoryData);
             cb(null, []);
-        })    
+        })
 
      }, function(err, result) {
          if(err) {
@@ -96,11 +96,11 @@ function getFormattedEndDate(date){
  function getFormattedStartMonth(date){
     return moment(new Date(date)).startOf("month").format("YYYY-MM-DD HH:mm:ss");
  }
- 
+
  function getFormattedEndMonth(date){
      return moment(new Date(date)).endOf("month").format("YYYY-MM-DD HH:mm:ss");
   }
- 
+
 
  // Returns an array of dates between the two dates
 function enumerateDaysBetweenDates(startDate, endDate) {
@@ -208,6 +208,54 @@ exports.fetchSummaryCount = (req, res, next) => {
     ])
 }
 
+exports.productSummaryReport = (req,res, next) => {
+
+    const sql_date_format = 'YYYY-MM-DD';
+
+    const original_date = moment();
+
+    var sql = "SELECT branch.name as branchName, prod.id as productId, prod.product_name as productName, steps.id as taskId, task_name as taskName, SUM(target) as taskTarget, SUM(completed) as taskCompleted from `maithree-db`.product_master_steps steps JOIN `maithree-db`.product_master prod ON steps.product_master_id = prod.id \
+        JOIN `maithree-db`.student_task_mapping_details stud_task ON stud_task.product_master_id = prod.id AND stud_task.product_master_steps_id = steps.id \
+        JOIN (select * from `maithree-db`.student_task_tracking where date >= ? AND date <= ?) tracking ON stud_task.mapping_id = tracking.student_task_mapping_details_mapping_id \
+        JOIN `maithree-db`.`student_details` stud_details ON stud_task.student_details_student_id = stud_details.student_id \
+        JOIN `maithree-db`.`branch-product_master` bp_master ON stud_task.product_master_id = bp_master.product_id AND stud_details.branch_id = bp_master.branch_id \
+        JOIN `maithree-db`.`branch` branch ON bp_master.branch_id = branch.id \
+        group by branchName, productId, taskId order by branchName ASC, productId ASC, taskId ASC";
+
+    var startDate = req.query.startDate ? moment(req.query.startDate) : original_date.clone().subtract(30, "days");
+    var endDate = req.query.endDate ? moment(req.query.endDate) : original_date.clone();
+
+    if (!startDate.isValid() || !endDate.isValid()) {
+        return res.status(400).json({ error: "Input dates are not valid" });
+    }
+
+    if (startDate.isAfter(endDate) || endDate.isAfter(moment.now())) {
+        return res.status(400).json({ error: "Please check the date range properly" });
+    }
+
+    if(endDate.diff(startDate, 'days') > 31) {
+        return res.status(400).json({ error: "Maximum Date range is 31 days"});
+    }
+
+    try {
+
+        logger.info(`Get Product Summary Report for the duration ::: Start Date =  ${startDate}, End Date = ${endDate}`);
+
+        db.query(sql, [startDate.format(sql_date_format), endDate.format(sql_date_format)], (err, result) => {
+            if (err) {
+                logger.error(err);
+                return res.status(500).json({ error: "Unable to fetch Product Summary Report" });
+            }
+            else {
+                return res.json(result);
+            }
+        });
+    } catch (err) {
+        logger.error(err);
+        next(err);
+    }
+}
+
 function executeQuery(sqlQuery, cb) {
     try {
 
@@ -215,7 +263,7 @@ function executeQuery(sqlQuery, cb) {
             if (err) {
                 logger.error(err);
                 cb(err);
-            }            
+            }
             cb(result);
         });
     } catch (err) {
