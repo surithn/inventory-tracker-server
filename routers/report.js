@@ -21,8 +21,13 @@ reportRouter.route('/inventories/:branchId/summary')
 }).get(reportController.getInventriesCountByBranchId);
 
 reportRouter.route('/fetchTotalSummary')
-.all(function(req,res,next) {    
+.all(function(req,res,next) {
     next();
 }).get(reportController.fetchSummaryCount);
+
+reportRouter.route('/fetchProductSummary')
+.all(function(req,res,next) {
+    next();
+}).get(reportController.productSummaryReport);
 
 module.exports = reportRouter;

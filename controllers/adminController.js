@@ -587,7 +587,7 @@ exports.editStudentDetails = (req, res, next) => {
             studentId];
 
         // delete from student task mapping table
-        db.query(delete_student_task_mapping_query, function (err, result, fields) {
+        /* db.query(delete_student_task_mapping_query, function (err, result, fields) {
                 if (err) {
                     logger.error(err);
                 }
@@ -618,9 +618,14 @@ exports.editStudentDetails = (req, res, next) => {
                         logger.error(err);
                     }
                 });
-            }
-        );
-
+            });
+ */
+            // update student
+            db.query(update_student_query, student_values, function (err, result) {
+                if (err) {
+                    logger.error(err);
+                }
+            });
 
     } catch (err) {
         logger.error(err);
