@@ -7,7 +7,7 @@ var async = require("async");
 var _ = require("lodash");
 
 exports.getStudentsByBranch = (req,res,next) => {
-    var sql = "SELECT student_id as studentId, CONCAT(first_name, ' ' , last_name) as studentName from `student_details` where branch_id = ?";
+    var sql = "SELECT student_id as studentId, first_name as firstName, last_name as lastName from `student_details` where branch_id = ?";
     var branchId = req.params.id
     logger.info(`Get students for branch id ::: ${branchId}`);
     try {
@@ -108,15 +108,15 @@ exports.getTasksMappedForProduct = (req,res,next) => {
              return next(err);
            }
            var transformed_response = result.map((each_obj) => {
-                if (each_obj.target === null && each_obj.completed === null) {        
+                if (each_obj.target === null && each_obj.completed === null) {
                     each_obj.assigned = false;
                     each_obj.target = 0;
                     each_obj.completed = 0;
                     return each_obj;
                 }
                 else {
-                    return {                        
-                        productId : each_obj.productId,                                    
+                    return {
+                        productId : each_obj.productId,
                         taskId : each_obj.taskId,
                         taskName : each_obj.taskName,
                         taskDescription : each_obj.taskDescription,
@@ -135,303 +135,6 @@ exports.getTasksMappedForProduct = (req,res,next) => {
      }
 }
 
-/*
-exports.getStudentProductMappingDetailsForBranchOld = (req,res,next) => {
-
-    var select_student_query = "SELECT student_id, CONCAT(first_name, ' ', last_name) as name from `student_details` where branch_id = ?";
-    var branchId = req.params.id;
-    logger.info(`Get students for branch id ::: ${branchId}`);
-    var student_ids = [];
-    var students_task_mapping_ids = [];
-
-    try {
-       async.series([
-            (callbackFromStudentTable) => {
-            db.query(select_student_query,[branchId], (err, result) => {
-                if (err) {
-                    logger.error(err);
-                    return next(err);
-                }
-                logger.info(" Students retrived for branch ::: ", JSON.stringify(result));
-                student_ids = result.map(student => student.student_id);
-                callbackFromStudentTable(null,result);
-            })
-        },
-        (callbackFromStudentTaskMappingTable) => {
-            var student_task_mapping_query = "SELECT * from `student_task_mapping_details` where student_details_student_id IN (?)"
-            db.query(student_task_mapping_query,[student_ids], (err, result) => {
-                if (err) {
-                    logger.error(err);
-                    return next(err);
-                }
-                logger.info("Tasks retrived for students ::: ", JSON.stringify(student_ids), " are ::: ", JSON.stringify(result));
-                students_task_mapping_ids =  result.map(student_task_mapping => student_task_mapping.mapping_id);               
-                callbackFromStudentTaskMappingTable(null, result);
-            })    
-        },
-        (callbackFromStudentTrackingTable) => {
-            var student_tracking_query = "SELECT * from `student_task_tracking` where date = ? AND student_task_mapping_details_mapping_id IN (?)";
-            var today = moment().format("YYYY-MM-DD");
-            db.query(student_tracking_query,[today, students_task_mapping_ids], (err, result) => {
-                if (err) {
-                    logger.error(err);
-                    return next(err);
-                }
-                logger.info("Tasks tracking retrived for " , today ,  " for mapping ids ::: ", JSON.stringify(students_task_mapping_ids), " are ::: ", JSON.stringify(result));                               
-                callbackFromStudentTrackingTable(null, result);
-            })
-        }
-       ], (err, total_result) => {
-            if (err) {
-                logger.error(" Error occurred in one of the tasks ", err);
-                return next(err);
-            }
-            //console.log(" All tasks completed ::: ", JSON.stringify(total_result));
-
-            var consolidated_student_mapping = [], consolidated_response = {}
-            _.each(total_result[0], (each_student) => {
-                var student_details = each_student;
-                var product_details = _.filter(total_result[1], (each_mapping) => {
-                    return each_mapping.student_details_student_id ===  each_student.student_id
-                });
-                                
-                var task_grouped_by_product = _.groupBy(product_details, "product_master_id");
-                console.log("Product details for Student ", each_student.student_id, " is :::", task_grouped_by_product);
-                
-                var tasks_for_student, products_for_student = [];
-
-                var product_details_fetched_from_db = {}
-
-                var grouped_product_ids_for_student = Object.keys(task_grouped_by_product);
-
-                _.each(grouped_product_ids_for_student, (each_product_id) => {
-                    var fetch_product_details_query = "select id, product_name from `product_master` where id = ?";
-                    db.query(fetch_product_details_query,[each_product_id], (err, result) => {
-                        product_details_fetched_from_db = result;
-                        _.each(task_grouped_by_product[each_product_id], (each_task_mapping) => {
-                            var existing_tracking_details = _.filter(total_result[2], (each_tracking_details) => {
-                                return each_tracking_details.student_task_mapping_details_mapping_id === each_task_mapping.mapping_id
-                            })
-                            var fetch_tasks_details_query = "select id, task_name, task_description from `product_master_steps` where id = ?";
-                            db.query(fetch_tasks_details_query,[each_task_mapping.product_master_steps_id], (err, result) => {
-                                var task_details = result;
-                                if (existing_tracking_details.length > 0) {
-                                    task_details.target = existing_tracking_details[0].target;
-                                    task_details.completed = existing_tracking_details[0].completed;
-                                    task_details.assigned = true;
-                                }
-                                else {
-                                    task_details.target = 0;
-                                    task_details.completed = 0;
-                                    task_details.assigned = false
-                                }
-                                tasks_for_student.push(task_details);
-                            })
-                        })
-                        //products_for_student.push(tasks_for_student);
-                        product_details_fetched_from_db.tasks = tasks_for_student;
-                        products_for_student.push(product_details_fetched_from_db);
-                    })                    
-                })
-                student_details.products = products_for_student;
-                consolidated_student_mapping.push(student_details);
-            })
-            consolidated_response.students = consolidated_student_mapping;
-            logger.info(" Final consolidated student mapping response ::: ", JSON.stringify(consolidated_response));
-            res.json(consolidated_response);
-       })       
-    } catch (err) {
-        logger.error(err);
-        next(err);
-    }
-
-}
-
-
-
-exports.getStudentProductMappingDetailsForBranchOldv2 = (req,res,next) => {
-
-    var select_student_query = "SELECT student_id, CONCAT(first_name, ' ', last_name) as name from `student_details` where branch_id = ?";
-    var branchId = req.params.id;
-    logger.info(`Get students for branch id ::: ${branchId}`);
-    var student_ids = [];
-    var students_task_mapping_ids = [];
-
-    try {
-       async.series([
-            (callbackFromStudentTable) => {
-            db.query(select_student_query,[branchId], (err, result) => {
-                if (err) {
-                    logger.error(err);
-                    return next(err);
-                }
-                logger.info(" Students retrived for branch ::: ", JSON.stringify(result));
-                student_ids = result.map(student => student.student_id);
-                callbackFromStudentTable(null,result);
-            })
-        },
-        (callbackFromStudentTaskMappingTable) => {
-            var student_task_mapping_query = "SELECT * from `student_task_mapping_details` where student_details_student_id IN (?)"
-            db.query(student_task_mapping_query,[student_ids], (err, result) => {
-                if (err) {
-                    logger.error(err);
-                    return next(err);
-                }
-                logger.info("Tasks retrived for students ::: ", JSON.stringify(student_ids), " are ::: ", JSON.stringify(result));
-                students_task_mapping_ids =  result.map(student_task_mapping => student_task_mapping.mapping_id);               
-                callbackFromStudentTaskMappingTable(null, result);
-            })    
-        },
-        (callbackFromStudentTrackingTable) => {
-            var student_tracking_query = "SELECT * from `student_task_tracking` where date = ? AND student_task_mapping_details_mapping_id IN (?)";
-            var today = moment().format("YYYY-MM-DD");
-            db.query(student_tracking_query,[today, students_task_mapping_ids], (err, result) => {
-                if (err) {
-                    logger.error(err);
-                    return next(err);
-                }
-                logger.info("Tasks tracking retrived for " , today ,  " for mapping ids ::: ", JSON.stringify(students_task_mapping_ids), " are ::: ", JSON.stringify(result));                               
-                callbackFromStudentTrackingTable(null, result);
-            })
-        }
-       ], (err, total_result) => {
-            if (err) {
-                logger.error(" Error occurred in one of the tasks ", err);
-                return next(err);
-            }
-            //console.log(" All tasks completed ::: ", JSON.stringify(total_result));
-
-            var consolidated_student_mapping = [], consolidated_response = {}
-
-            var tasks_for_student = [] , products_for_student = [];
-
-            var product_details_fetched_from_db = {};
-
-            async.forEach(total_result[0], processEachStudent, onProcessCompletedForAllStudents);
-
-            function processEachStudent(each_student, callbackFromEachStudent) {
-                
-                var student_details = each_student;
-                
-                var product_details = _.filter(total_result[1], (each_mapping) => {
-                    return each_mapping.student_details_student_id ===  each_student.student_id
-                });
-                                
-                var task_grouped_by_product = _.groupBy(product_details, "product_master_id");
-                console.log("Product details for Student ", each_student.student_id, " is :::", task_grouped_by_product);
-                
-                var grouped_product_ids_for_student = Object.keys(task_grouped_by_product);
-                
-                async.forEach(grouped_product_ids_for_student, processEachProductIdForStudent, onProcessCompletedForProductId);
-
-                function processEachProductIdForStudent (each_product_id, callbackFromEachProductId) {
-
-                    var fetch_product_details_query = "SELECT id, product_name from `product_master` where id = ?";
-
-                    db.query(fetch_product_details_query,[each_product_id], (err, result) => {
-                        
-                        product_details_fetched_from_db = result;
-                        
-                        async.forEach(task_grouped_by_product[each_product_id], processTasksForProducts, onProcessCompletedForTasks);
-
-                        function processTasksForProducts(each_task_mapping, callbackFromTaskMapping) {
-                            var existing_tracking_details = _.filter(total_result[2], (each_tracking_details) => {
-                                return each_tracking_details.student_task_mapping_details_mapping_id === each_task_mapping.mapping_id
-                            })
-                            var fetch_tasks_details_query = "select id, task_name, task_description from `product_master_steps` where id = ?";
-                            db.query(fetch_tasks_details_query,[each_task_mapping.product_master_steps_id], (err, result) => {
-                                var task_details = result[0];
-                                if (existing_tracking_details.length > 0) {
-                                    task_details.target = existing_tracking_details[0].target;
-                                    task_details.completed = existing_tracking_details[0].completed;
-                                    task_details.assigned = true;
-                                }
-                                else {
-                                    task_details.target = 0;
-                                    task_details.completed = 0;
-                                    task_details.assigned = false
-                                }
-                                tasks_for_student.push(task_details);
-                                callbackFromTaskMapping(null);
-                            })
-                        }
-
-                        function onProcessCompletedForTasks() {
-                            product_details_fetched_from_db.tasks = tasks_for_student;
-                            products_for_student.push(product_details_fetched_from_db);
-                            callbackFromEachProductId(null);
-                        }                        
-                    })
-                }
-
-                function onProcessCompletedForProductId() {
-                    student_details.products = products_for_student;
-                    consolidated_student_mapping.push(student_details);
-                    callbackFromEachStudent(null);
-                }                
-            }
-
-            function onProcessCompletedForAllStudents() {
-                consolidated_response.students = consolidated_student_mapping;
-                logger.info(" Final consolidated student mapping response ::: ", JSON.stringify(consolidated_response));
-                res.json(consolidated_response);
-            }
-
-            /* _.each(total_result[0], (each_student) => {
-                var student_details = each_student;
-                var product_details = _.filter(total_result[1], (each_mapping) => {
-                    return each_mapping.student_details_student_id ===  each_student.student_id
-                });
-                                
-                var task_grouped_by_product = _.groupBy(product_details, "product_master_id");
-                console.log("Product details for Student ", each_student.student_id, " is :::", task_grouped_by_product);
-                
-                var tasks_for_student, products_for_student = [];
-
-                var product_details_fetched_from_db = {}
-
-                var grouped_product_ids_for_student = Object.keys(task_grouped_by_product);
-
-                _.each(grouped_product_ids_for_student, (each_product_id) => {
-                    var fetch_product_details_query = "select id, product_name from `product_master` where id = ?";
-                    db.query(fetch_product_details_query,[each_product_id], (err, result) => {
-                        product_details_fetched_from_db = result;
-                        _.each(task_grouped_by_product[each_product_id], (each_task_mapping) => {
-                            var existing_tracking_details = _.filter(total_result[2], (each_tracking_details) => {
-                                return each_tracking_details.student_task_mapping_details_mapping_id === each_task_mapping.mapping_id
-                            })
-                            var fetch_tasks_details_query = "select id, task_name, task_description from `product_master_steps` where id = ?";
-                            db.query(fetch_tasks_details_query,[each_task_mapping.product_master_steps_id], (err, result) => {
-                                var task_details = result;
-                                if (existing_tracking_details.length > 0) {
-                                    task_details.target = existing_tracking_details[0].target;
-                                    task_details.completed = existing_tracking_details[0].completed;
-                                    task_details.assigned = true;
-                                }
-                                else {
-                                    task_details.target = 0;
-                                    task_details.completed = 0;
-                                    task_details.assigned = false
-                                }
-                                tasks_for_student.push(task_details);
-                            })
-                        })
-                        //products_for_student.push(tasks_for_student);
-                        product_details_fetched_from_db.tasks = tasks_for_student;
-                        products_for_student.push(product_details_fetched_from_db);
-                    })                    
-                })
-                student_details.products = products_for_student;
-                consolidated_student_mapping.push(student_details);
-            })             
-       })       
-    } catch (err) {
-        logger.error(err);
-        next(err);
-    }
-
-}*/
-
 exports.saveStudentTrackingDetails = (req,res,next) => {
 
     var taskdetails = req.body.task;
@@ -448,11 +151,11 @@ exports.saveStudentTrackingDetails = (req,res,next) => {
 
     function processEachTaskDetail(each_task_detail, callbackFromTaskMapping) {
         var values = [req.body.studentId, req.body.productId, each_task_detail.id];
-        
+
         db.query(select_query_for_student_task_mapping, values, (err, mappingResult) => {
-            
+
             each_task_detail.mappingId = mappingResult[0].mapping_id;
-            
+
             var delete_previous_tracking_for_student = "DELETE from `student_task_tracking` WHERE  student_task_mapping_details_mapping_id = ? AND date = ?";
 
             db.query(delete_previous_tracking_for_student, [each_task_detail.mappingId, today], (err, deleteResult) => {
@@ -475,7 +178,7 @@ exports.saveStudentTrackingDetails = (req,res,next) => {
     function onProcessCompletedForAllTaskDetail() {
         logger.info(" Tracking details completed for student ::: ", req.body.studentId, " , tracking id are ::: ", tracking_ids);
         res.json({trackingIds : tracking_ids});
-    }    
+    }
 }
 
 
@@ -485,7 +188,7 @@ exports.getStudentProgress = (req,res,next) => {
     const original_date = moment();
     const given_date = original_date.clone();
     var studentId = req.query.studentId;
-    
+
     var this_week_start_date = given_date.startOf('isoWeek').format(date_format)
     var this_week_end_date = given_date.endOf('isoWeek').format(date_format)
     var last_week_start_date = original_date.clone().isoWeekday(-6).format(date_format)
@@ -498,12 +201,12 @@ exports.getStudentProgress = (req,res,next) => {
     var fetch_count_query = "select stud_task.student_details_student_id as studentId, SUM(target) as totalTarget, SUM(completed) as totalCompleted from `maithree-db`.student_task_mapping_details stud_task \
             JOIN (select * from `maithree-db`.student_task_tracking where date >= ? AND date <= ?) tracking ON stud_task.mapping_id = tracking.student_task_mapping_details_mapping_id \
             where stud_task.student_details_student_id = ? group by studentId"
-            
+
     db.query(fetch_count_query,[this_week_start_date, this_week_end_date, studentId], (err, thisWeekProgressResults) => {
         //Make another query to find last week results
         db.query(fetch_count_query,[last_week_start_date, last_week_end_date, studentId], (err, lastWeekProgressResults) => {
-            
-            //Compare the results and send the response            
+
+            //Compare the results and send the response
             console.log("This week result ::: ", thisWeekProgressResults);
             console.log("Last week result ::: ", lastWeekProgressResults);
 
@@ -533,12 +236,12 @@ exports.getStudentProgress = (req,res,next) => {
                     target : lastWeekProgressResults[0].totalTarget,
                     completed : lastWeekProgressResults[0].totalCompleted
                 }
-                progressResponse.status = progressResponse.this_week.completed > progressResponse.last_week.completed ? 
+                progressResponse.status = progressResponse.this_week.completed > progressResponse.last_week.completed ?
                     "Improved" : progressResponse.this_week.completed < progressResponse.last_week.completed ? "Declined" : "Equal";
             }
             res.json(progressResponse);
         })
-    })        
+    })
 
 }
 
