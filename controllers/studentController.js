@@ -355,9 +355,11 @@ exports.getStudentProgressAcrossWeeks = (req, res, next) => {
                                         if (processIndex == 1) {
                                             taskProgress.week1 = {
                                                 period: `${second_last_week_start_date.format(display_date_format)} - ${second_last_week_end_date.format(display_date_format)}`,
-                                                target: eachSLWResult.groupedTarget,
-                                                completed: eachSLWResult.groupedCompleted
+                                                target: (eachSLWResult.groupedTarget)?eachSLWResult.groupedTarget:0,
+                                                completed: eachSLWResult.groupedCompleted?eachSLWResult.groupedCompleted:0,
+                                                status: "Equal"
                                             }
+
 
                                             if (similarProgressFromThirdLastWeek.length > 0) {
                                                 taskProgress.week1.status = taskProgress.week1.completed > similarProgressFromThirdLastWeek[0].groupedCompleted ?
@@ -373,7 +375,10 @@ exports.getStudentProgressAcrossWeeks = (req, res, next) => {
                                             })
 
                                             taskProgress.week2 = {
-                                                period: `${last_week_start_date.format(display_date_format)} - ${last_week_end_date.format(display_date_format)}`
+                                                period: `${last_week_start_date.format(display_date_format)} - ${last_week_end_date.format(display_date_format)}`,
+                                                target: 0,
+                                                completed: 0,
+                                                status: "Equal"
                                             }
 
                                             if (similarProgressFromPastWeek.length > 0) {
@@ -384,7 +389,10 @@ exports.getStudentProgressAcrossWeeks = (req, res, next) => {
                                             }
 
                                             taskProgress.week3 = {
-                                                period: `${this_week_start_date.format(display_date_format)} - ${this_week_end_date.format(display_date_format)}`
+                                                period: `${this_week_start_date.format(display_date_format)} - ${this_week_end_date.format(display_date_format)}`,
+                                                target: 0,
+                                                completed: 0,
+                                                status: "Equal"
                                             }
 
                                             if (similarProgressFromThisWeek.length > 0) {
@@ -412,12 +420,16 @@ exports.getStudentProgressAcrossWeeks = (req, res, next) => {
 
                                             taskProgress.week1 = {
                                                 period: `${second_last_week_start_date.format(display_date_format)} - ${second_last_week_end_date.format(display_date_format)}`,
+                                                target: 0,
+                                                completed: 0,
+                                                status: "Equal"
                                             }
 
                                             taskProgress.week2 = {
                                                 period: `${last_week_start_date.format(display_date_format)} - ${last_week_end_date.format(display_date_format)}`,
-                                                target: eachSLWResult.groupedTarget,
-                                                completed: eachSLWResult.groupedCompleted
+                                                target: (eachSLWResult.groupedTarget)?eachSLWResult.groupedTarget:0,
+                                                completed: eachSLWResult.groupedCompleted?eachSLWResult.groupedCompleted:0,
+                                                status: "Equal"
                                             }
 
                                             if (similarProgressFromPastWeek.length > 0) {
@@ -434,7 +446,11 @@ exports.getStudentProgressAcrossWeeks = (req, res, next) => {
                                             }
 
                                             taskProgress.week3 = {
-                                                period: `${this_week_start_date.format(display_date_format)} - ${this_week_end_date.format(display_date_format)}`
+                                                period: `${this_week_start_date.format(display_date_format)} - ${this_week_end_date.format(display_date_format)}`,
+                                                target: 0,
+                                                completed: 0,
+                                                status: "Equal"
+
                                             }
 
                                             if (similarProgressFromNextWeek.length > 0) {
@@ -456,13 +472,17 @@ exports.getStudentProgressAcrossWeeks = (req, res, next) => {
                                             })
 
                                             taskProgress.week2 = {
-                                                period: `${last_week_start_date.format(display_date_format)} - ${last_week_end_date.format(display_date_format)}`
+                                                period: `${last_week_start_date.format(display_date_format)} - ${last_week_end_date.format(display_date_format)}`,
+                                                target: 0,
+                                                completed: 0,
+                                                status: "Equal"
                                             }
 
                                             taskProgress.week3 = {
                                                 period: `${this_week_start_date.format(display_date_format)} - ${this_week_end_date.format(display_date_format)}`,
-                                                target: eachSLWResult.groupedTarget,
-                                                completed: eachSLWResult.groupedCompleted
+                                                target: (eachSLWResult.groupedTarget)?eachSLWResult.groupedTarget:0,
+                                                completed: eachSLWResult.groupedCompleted?eachSLWResult.groupedCompleted:0,
+                                                status: "Equal"
                                             }
 
                                             if (similarProgressFromPastWeek.length > 0) {
@@ -474,6 +494,9 @@ exports.getStudentProgressAcrossWeeks = (req, res, next) => {
 
                                             taskProgress.week1 = {
                                                 period: `${second_last_week_start_date.format(display_date_format)} - ${second_last_week_end_date.format(display_date_format)}`,
+                                                target: 0,
+                                                completed: 0,
+                                                status: "Equal"
                                             }
 
                                             if (similarProgressFromSecondPastWeek.length > 0) {

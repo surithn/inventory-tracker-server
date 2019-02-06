@@ -214,13 +214,13 @@ exports.productSummaryReport = (req,res, next) => {
 
     const original_date = moment();
 
-    var sql = "SELECT branch.name as branchName, prod.id as productId, prod.product_name as productName, steps.id as taskId, task_name as taskName, SUM(target) as taskTarget, SUM(completed) as taskCompleted from `maithree-db`.product_master_steps steps JOIN `maithree-db`.product_master prod ON steps.product_master_id = prod.id \
+    var sql = "SELECT tracking.date as submittedDate,branch.name as branchName, prod.id as productId, prod.product_name as productName, steps.id as taskId, task_name as taskName, SUM(target) as taskTarget, SUM(completed) as taskCompleted from `maithree-db`.product_master_steps steps JOIN `maithree-db`.product_master prod ON steps.product_master_id = prod.id \
         JOIN `maithree-db`.student_task_mapping_details stud_task ON stud_task.product_master_id = prod.id AND stud_task.product_master_steps_id = steps.id \
         JOIN (select * from `maithree-db`.student_task_tracking where date >= ? AND date <= ?) tracking ON stud_task.mapping_id = tracking.student_task_mapping_details_mapping_id \
         JOIN `maithree-db`.`student_details` stud_details ON stud_task.student_details_student_id = stud_details.student_id \
         JOIN `maithree-db`.`branch-product_master` bp_master ON stud_task.product_master_id = bp_master.product_id AND stud_details.branch_id = bp_master.branch_id \
         JOIN `maithree-db`.`branch` branch ON bp_master.branch_id = branch.id \
-        group by branchName, productId, taskId order by branchName ASC, productId ASC, taskId ASC";
+        group by tracking.date, branchName, productId, taskId order by tracking.date ASC, branchName ASC, productId ASC, taskId ASC";
 
     var startDate = req.query.startDate ? moment(req.query.startDate) : original_date.clone().subtract(30, "days");
     var endDate = req.query.endDate ? moment(req.query.endDate) : original_date.clone();
