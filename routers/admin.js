@@ -52,6 +52,24 @@ adminRouter.route('/addStudent')
     })
     .post(adminController.addStudentDetails);
 
+adminRouter.route('/addMember')
+    .all(function (req, res, next) {
+        next();
+    })
+    .post(adminController.addMember);
+
+adminRouter.route('/editMember')
+    .all(function (req, res, next) {
+        next();
+    })
+    .post(adminController.updateMember);
+
+adminRouter.route('/getAllMembers')
+    .all(function (req, res, next) {
+        next();
+    })
+    .get(adminController.getMembers);
+
 adminRouter.route('/editStudent')
     .all(function (req, res, next) {
         next();
